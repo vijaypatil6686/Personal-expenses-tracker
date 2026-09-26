@@ -1,0 +1,721 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Expense Report Generator</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.7.1/chart.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
+    <link rel="stylesheet" href="report.css">
+    <style>
+        /* General Styles */
+        body {
+            font-family: 'Poppins', sans-serif;
+            background: linear-gradient(to right, #3a0ca3, #240046); /* Dark Purple Gradient */
+            color: white;
+            margin: 0;
+            padding: 0;
+        }
+
+        /* Navigation Bar */
+        nav {
+            background: rgba(0, 0, 0, 0.7);
+            padding: 10px 0;
+            position: fixed;
+            width: 100%;
+            top: 0;
+            z-index: 1000;
+        }
+        nav ul {
+            list-style: none;
+            display: flex;
+            justify-content: flex-end;
+            padding: 0 20px;
+        }
+        nav ul li {
+            margin: 0 15px;
+        }
+        nav ul li a {
+            color: white;
+            text-decoration: none;
+            font-size: 18px;
+            transition: 0.3s;
+        }
+        nav ul li a:hover {
+            color: #ffcc00;
+        }
+
+        /* Main Container */
+        .container {
+            max-width: 1000px;
+            margin: 120px auto;
+            padding: 30px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+        }
+
+        /* Title Styling */
+        h1 {
+            text-align: center;
+            font-size: 40px;
+            font-weight: bold;
+            margin-bottom: 40px;
+            font-family: 'Dancing Script', cursive; /* Fancy Cursive Font */
+        }
+
+        /* Date Filter Section */
+        .filter-container {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 40px;
+        }
+        .filter-container label {
+            font-size: 18px;
+            color: #ffcc00;
+        }
+        .filter-container input[type="date"] {
+            padding: 10px;
+            border-radius: 5px;
+            border: none;
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            font-size: 16px;
+        }
+        .filter-container button {
+            background: #ffcc00;
+            color: black;
+            font-weight: bold;
+            padding: 12px 20px;
+            border-radius: 5px;
+            border: none;
+            cursor: pointer;
+            transition: 0.3s;
+        }
+        .filter-container button:hover {
+            background: #ffaa00;
+        }
+
+        /* Report Summary */
+        .report-summary {
+            background: rgba(0, 0, 0, 0.6);
+            padding: 25px;
+            border-radius: 10px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.5);
+            margin-bottom: 30px;
+        }
+        .report-summary h2 {
+            font-size: 24px;
+            text-align: center;
+            color: #ffcc00;
+            margin-bottom: 20px;
+        }
+        .report-summary p {
+            font-size: 18px;
+            line-height: 1.6;
+            padding: 5px 10px;
+        }
+
+        /* Detailed Insights */
+        .detailed-insights {
+            background: rgba(0, 0, 0, 0.6);
+            padding: 25px;
+            border-radius: 10px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.5);
+            margin-bottom: 40px;
+        }
+        .detailed-insights h3 {
+            font-size: 22px;
+            text-align: center;
+            color: #ffcc00;
+            margin-bottom: 15px;
+        }
+        .detailed-insights .insight-item {
+            font-size: 18px;
+            margin: 15px 0;
+        }
+        .insight-item b {
+            color: #ffcc00;
+        }
+
+        /* Graph Container */
+        .graph-container {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: space-around;
+            gap: 30px;
+            margin-top: 20px;
+        }
+        canvas {
+            width: 100% !important;
+            max-width: 500px;
+            max-height: 300px;
+            background: white;
+            border-radius: 10px;
+            padding: 10px;
+        }
+
+        /* Download Button */
+        .download-btn {
+            display: block;
+            width: 220px;
+            margin: 40px auto;
+            text-align: center;
+            background: #28a745; /* Green Button */
+            padding: 12px 0;
+            font-size: 18px;
+            font-weight: bold;
+            border-radius: 8px;
+            text-decoration: none;
+            color: white;
+            transition: 0.3s;
+        }
+        .download-btn:hover {
+            background: #218838;
+        }
+
+        /* Animations */
+        .container, .report-summary, .detailed-insights, .graph-container, .download-btn {
+            opacity: 0;
+            transform: translateY(30px);
+            animation: fadeInUp 1s ease-out forwards;
+        }
+
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+    </style>
+</head>
+<body>
+    <nav>
+        <ul>
+            <li><a href="home.html">Dashboard</a></li>
+            <li><a href="account.html">My Account</a></li>
+            <li><a href="report.html" >Download Report</a></li>
+        </ul>
+    </nav>
+
+    <div class="container">
+        <h1>Expense Report Generator</h1>
+
+        <div class="filter-container">
+            <div>
+                <label for="fromDate">From Date:</label>
+                <input type="date" id="fromDate">
+            </div>
+            <div>
+                <label for="toDate">To Date:</label>
+                <input type="date" id="toDate">
+            </div>
+            <button onclick="generateReport()">Generate Report</button>
+        </div>
+
+        <div id="report-section">
+            <div class="report-summary">
+                <h2>Report Summary</h2>
+                <p><b>Total Spent:</b> <span id="totalSpent">0</span></p>
+                <p><b>Average Daily Spend:</b> <span id="avgSpend">0</span></p>
+                <p><b>Highest Spent Category:</b> <span id="maxCategory">N/A</span> (<span id="maxCategoryAmount">0</span>)</p>
+                <p><b>Lowest Spent Category:</b> <span id="minCategory">N/A</span> (<span id="minCategoryAmount">0</span>)</p>
+                <p><b>Most Frequent Expense:</b> <span id="mostFreq">N/A</span></p>
+                <p><b>Least Frequent Expense:</b> <span id="leastFreq">N/A</span></p>
+                <p><b>Biggest Single Expense:</b> <span id="biggestExpense">0</span></p>
+                <p><b>Smallest Single Expense:</b> <span id="smallestExpense">0</span></p>
+            </div>
+
+            <div class="detailed-insights">
+                <h3>Detailed Insights</h3>
+                <div class="insight-item"><b>Top Expense Category:</b> <span id="topCategory">N/A</span></div>
+                <div class="insight-item"><b>Month with Highest Spend:</b> <span id="highestMonth">N/A</span></div>
+                <div class="insight-item"><b>Top Expense Title:</b> <span id="topTitle">N/A</span></div>
+                <div class="insight-item"><b>Expense Distribution by Category:</b> <span id="categoryDistribution">N/A</span></div>
+            </div>
+
+            <div class="graph-container">
+                <canvas id="categoryChart"></canvas>
+                <canvas id="trendChart"></canvas>
+            </div>
+
+            <a href="#" class="download-btn" onclick="downloadPDF()">Download PDF</a>
+        </div>
+    </div>
+
+    <script>
+        let expenseData = [];  // Global variable to store fetched expenses
+
+        async function generateReport() {
+            const email = localStorage.getItem('email');
+            //const email = document.getElementById('email').value;
+            const fromDate = document.getElementById('fromDate').value;
+            const toDate = document.getElementById('toDate').value;
+
+            if (!email || !fromDate || !toDate) {
+                alert("Please fill all fields.");
+                return;
+            }
+
+            try {
+                const response = await fetch('http://localhost:3000/api/getExpenseReport', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ email, fromDate, toDate })
+                });
+
+                // Check if the response is ok
+                if (!response.ok) {
+                    throw new Error(`Error: ${response.statusText}`);
+                }
+
+                const data = await response.json();
+
+                // Store the fetched expenses in the global variable
+                expenseData = data.expenses;
+
+                console.log(expenseData);
+                generateReport1();
+                calculateDetailedInsights();
+
+            } catch (error) {
+                console.error('Error fetching the report:', error);
+                alert("Error fetching the report.");
+            }
+        }
+// Global variable to store fetched expenses
+// Generate report and calculate necessary details
+function generateReport1() {
+    try {
+        // Total amount spent
+        const totalSpent = expenseData.reduce((total, expense) => total + expense.amount, 0);
+        document.getElementById('totalSpent').innerText = totalSpent.toFixed(2);
+    } catch (error) {
+        document.getElementById('totalSpent').innerText = "0";
+        console.error("Error calculating total spent:", error);
+    }
+
+    try {
+    // Calculate total spent
+    const totalSpent = expenseData.reduce((total, expense) => {
+        return total + parseFloat(expense.amount);
+    }, 0);
+
+    // Average daily spend
+    const uniqueDates = new Set(expenseData.map(expense => new Date(expense.date).toISOString().split("T")[0]));
+    const avgSpend = uniqueDates.size > 0 ? (totalSpent / uniqueDates.size) : 0;
+    document.getElementById('avgSpend').innerText = avgSpend.toFixed(2);
+} catch (error) {
+    document.getElementById('avgSpend').innerText = "0";
+    console.error("Error calculating average daily spend:", error);
+}
+
+
+    try {
+        // Category-wise spend: calculating max and min categories
+        const categoryTotals = expenseData.reduce((totals, expense) => {
+            if (!totals[expense.category]) {
+                totals[expense.category] = 0;
+            }
+            totals[expense.category] += expense.amount;
+            return totals;
+        }, {});
+
+        const maxCategory = Object.keys(categoryTotals).reduce((maxCat, cat) => 
+            categoryTotals[cat] > (categoryTotals[maxCat] || 0) ? cat : maxCat, '');
+        const maxCategoryAmount = categoryTotals[maxCategory] || 0;
+        document.getElementById('maxCategory').innerText = maxCategory || "N/A";
+        document.getElementById('maxCategoryAmount').innerText = maxCategoryAmount.toFixed(2);
+
+        const minCategory = Object.keys(categoryTotals).reduce((minCat, cat) => 
+            categoryTotals[cat] < (categoryTotals[minCat] || Infinity) ? cat : minCat, '');
+        const minCategoryAmount = categoryTotals[minCategory] || 0;
+        document.getElementById('minCategory').innerText = minCategory || "N/A";
+        document.getElementById('minCategoryAmount').innerText = minCategoryAmount.toFixed(2);
+    } catch (error) {
+        document.getElementById('maxCategory').innerText = "N/A";
+        document.getElementById('maxCategoryAmount').innerText = "0";
+        document.getElementById('minCategory').innerText = "N/A";
+        document.getElementById('minCategoryAmount').innerText = "0";
+        console.error("Error calculating category totals:", error);
+    }
+
+    try {
+        // Most and least frequent expense
+        const titleCounts = expenseData.reduce((counts, expense) => {
+            counts[expense.title] = (counts[expense.title] || 0) + 1;
+            return counts;
+        }, {});
+
+        const mostFreqTitle = Object.keys(titleCounts).reduce((mostFreq, title) => 
+            titleCounts[title] > (titleCounts[mostFreq] || 0) ? title : mostFreq, '');
+        const leastFreqTitle = Object.keys(titleCounts).reduce((leastFreq, title) => 
+            titleCounts[title] < (titleCounts[leastFreq] || Infinity) ? title : leastFreq, '');
+
+        document.getElementById('mostFreq').innerText = mostFreqTitle || "N/A";
+        document.getElementById('leastFreq').innerText = leastFreqTitle || "N/A";
+    } catch (error) {
+        document.getElementById('mostFreq').innerText = "N/A";
+        document.getElementById('leastFreq').innerText = "N/A";
+        console.error("Error calculating frequency of expenses:", error);
+    }
+
+    try {
+    // Ensure that all amounts are valid numbers
+    const validAmounts = expenseData
+        .map(expense => parseFloat(expense.amount))
+        .filter(amount => !isNaN(amount));  // Filter out invalid numbers
+
+    // Check if there are valid amounts before calculating
+    if (validAmounts.length > 0) {
+        const biggestExpense = Math.max(...validAmounts);
+        const smallestExpense = Math.min(...validAmounts);
+        
+        document.getElementById('biggestExpense').innerText = biggestExpense.toFixed(2);
+        document.getElementById('smallestExpense').innerText = smallestExpense.toFixed(2);
+    } else {
+        // If no valid amounts, set to 0
+        document.getElementById('biggestExpense').innerText = "0";
+        document.getElementById('smallestExpense').innerText = "0";
+    }
+} catch (error) {
+    document.getElementById('biggestExpense').innerText = "0";
+    document.getElementById('smallestExpense').innerText = "0";
+    console.error("Error calculating biggest and smallest expenses:", error);
+}
+
+
+    // Generate Charts
+    updateCharts();
+}
+
+// Generate Pie Chart for category distribution
+function generatePieChart() {
+    try {
+        const categoryTotals = expenseData.reduce((totals, expense) => {
+            if (!totals[expense.category]) {
+                totals[expense.category] = 0;
+            }
+            totals[expense.category] += expense.amount;
+            return totals;
+        }, {});
+
+        const ctx = document.getElementById("categoryChart").getContext("2d");
+        if (window.pieChart instanceof Chart) {
+            window.pieChart.destroy();
+        }
+
+        window.pieChart = new Chart(ctx, {
+            type: "pie",
+            data: {
+                labels: Object.keys(categoryTotals),
+                datasets: [{
+                    data: Object.values(categoryTotals),
+                    backgroundColor: ["#FF6384", "#36A2EB", "#FFCE56", "#4CAF50", "#9C27B0"]
+                }]
+            }
+        });
+    } catch (error) {
+        console.error("Error generating pie chart:", error);
+    }
+}
+
+// Generate Line Chart for spending trend over time
+function generateLineChart() {
+    try {
+        const dailyTotals = expenseData.reduce((totals, expense) => {
+            const date = new Date(expense.date).toISOString().split("T")[0]; // Format as YYYY-MM-DD
+            totals[date] = (totals[date] || 0) + expense.amount;
+            return totals;
+        }, {});
+
+        const sortedDates = Object.keys(dailyTotals).sort((a, b) => new Date(a) - new Date(b));
+
+        const ctx = document.getElementById("trendChart").getContext("2d");
+        if (window.lineChart instanceof Chart) {
+            window.lineChart.destroy();
+        }
+
+        window.lineChart = new Chart(ctx, {
+            type: "line",
+            data: {
+                labels: sortedDates,
+                datasets: [{
+                    label: "Amount Spent Over Time",
+                    data: sortedDates.map(date => dailyTotals[date]),
+                    borderColor: "#36A2EB",
+                    fill: false,
+                    tension: 0.3
+                }]
+            }
+        });
+    } catch (error) {
+        console.error("Error generating line chart:", error);
+    }
+}
+
+// Update the charts after generating the report
+function updateCharts() {
+    setTimeout(() => {
+        generatePieChart();
+        generateLineChart();
+    }, 500); // Delay to ensure data is ready
+}
+function calculateDetailedInsights() {
+    try {
+        // Top Expense Category
+        const categoryTotals = expenseData.reduce((totals, expense) => {
+            if (!totals[expense.category]) {
+                totals[expense.category] = 0;
+            }
+            totals[expense.category] += parseFloat(expense.amount);
+            return totals;
+        }, {});
+
+        const topCategory = Object.keys(categoryTotals).reduce((top, category) => {
+            if (!top || categoryTotals[category] > categoryTotals[top]) {
+                top = category;
+            }
+            return top;
+        }, "");
+
+        document.getElementById('topCategory').innerText = topCategory || "N/A";
+
+        // Month with Highest Spend
+        const monthTotals = expenseData.reduce((totals, expense) => {
+            const month = new Date(expense.date).toLocaleString('default', { month: 'long' });
+            if (!totals[month]) {
+                totals[month] = 0;
+            }
+            totals[month] += parseFloat(expense.amount);
+            return totals;
+        }, {});
+
+        const highestMonth = Object.keys(monthTotals).reduce((topMonth, month) => {
+            if (!topMonth || monthTotals[month] > monthTotals[topMonth]) {
+                topMonth = month;
+            }
+            return topMonth;
+        }, "");
+
+        document.getElementById('highestMonth').innerText = highestMonth || "N/A";
+
+        // Top Expense Title
+        const titleTotals = expenseData.reduce((totals, expense) => {
+            if (!totals[expense.title]) {
+                totals[expense.title] = 0;
+            }
+            totals[expense.title] += parseFloat(expense.amount);
+            return totals;
+        }, {});
+
+        const topTitle = Object.keys(titleTotals).reduce((top, title) => {
+            if (!top || titleTotals[title] > titleTotals[top]) {
+                top = title;
+            }
+            return top;
+        }, "");
+
+        document.getElementById('topTitle').innerText = topTitle || "N/A";
+
+        // Expense Distribution by Category
+        const categoryDistribution = Object.keys(categoryTotals)
+            .map(category => `${category}: ${categoryTotals[category].toFixed(2)}`)
+            .join(", ");
+
+        document.getElementById('categoryDistribution').innerText = categoryDistribution || "N/A";
+
+    } catch (error) {
+        console.error("Error calculating detailed insights:", error);
+        
+        // Fallback values in case of error
+        document.getElementById('topCategory').innerText = "N/A";
+        document.getElementById('highestMonth').innerText = "N/A";
+        document.getElementById('topTitle').innerText = "N/A";
+        document.getElementById('categoryDistribution').innerText = "N/A";
+    }
+}
+
+
+function downloadPDF() {
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF();
+
+    // Add the main title at the top (very large, bold)
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(30);
+    doc.text('Alchemist\'s Budget Tracker', 105, 20, null, null, 'center');  // Main title
+
+    // Add "Justice" below the title
+    doc.setFontSize(16);
+    doc.setFont('helvetica', 'normal');
+    doc.text('Justice', 105, 30, null, null, 'center');
+
+    // Add user's email below "Justice"
+    const email = "user@example.com"; // Replace with actual user's email if available
+    doc.setFontSize(12);
+    doc.text(email, 105, 40, null, null, 'center');
+
+    // Add a black line to separate the title and user email section
+    doc.setDrawColor(0, 0, 0);  // Black color for the line
+    doc.line(20, 45, 190, 45); // Draw a line from (20,45) to (190,45)
+
+    // Add Expense Report Summary section
+    doc.setFontSize(18);
+    doc.setFont('helvetica', 'bold');
+    doc.text('Report Summary', 105, 55, null, null, 'center');  // Section title
+
+    // Add a black line after the section title
+    doc.line(20, 60, 190, 60); // Draw a line from (20,60) to (190,60)
+
+    // Titles and Values (Titles will be bigger and bold)
+    const sectionContentFontSize = 14; // Smaller font size for content
+    const sectionTitleFontSize = 14; // Larger font size for section titles
+
+    // Total Spent
+    doc.setFontSize(sectionTitleFontSize); // Title font size
+    doc.text('Total Spent:', 20, 70);  // Section title (bold)
+    doc.setFontSize(sectionContentFontSize); // Content font size
+    doc.text(`$${document.getElementById('totalSpent').innerText}`, 180, 70, null, null, 'right');
+
+    // Average Daily Spend
+    doc.setFontSize(sectionTitleFontSize); // Title font size
+    doc.text('Average Daily Spend:', 20, 85);  // Section title (bold)
+    doc.setFontSize(sectionContentFontSize); // Content font size
+    doc.text(`$${document.getElementById('avgSpend').innerText}`, 180, 85, null, null, 'right');
+
+    // Highest Spent Category
+    doc.setFontSize(sectionTitleFontSize); // Title font size
+    doc.text('Highest Spent Category:', 20, 100);  // Section title (bold)
+    doc.setFontSize(sectionContentFontSize); // Content font size
+    doc.text(`${document.getElementById('maxCategory').innerText} ($${document.getElementById('maxCategoryAmount').innerText})`, 180, 100, null, null, 'right');
+
+    // Lowest Spent Category
+    doc.setFontSize(sectionTitleFontSize); // Title font size
+    doc.text('Lowest Spent Category:', 20, 115);  // Section title (bold)
+    doc.setFontSize(sectionContentFontSize); // Content font size
+    doc.text(`${document.getElementById('minCategory').innerText} ($${document.getElementById('minCategoryAmount').innerText})`, 180, 115, null, null, 'right');
+
+    // Most Frequent Expense
+    doc.setFontSize(sectionTitleFontSize); // Title font size
+    doc.text('Most Frequent Expense:', 20, 130);  // Section title (bold)
+    doc.setFontSize(sectionContentFontSize); // Content font size
+    doc.text(`${document.getElementById('mostFreq').innerText}`, 180, 130, null, null, 'right');
+
+    // Least Frequent Expense
+    doc.setFontSize(sectionTitleFontSize); // Title font size
+    doc.text('Least Frequent Expense:', 20, 145);  // Section title (bold)
+    doc.setFontSize(sectionContentFontSize); // Content font size
+    doc.text(`${document.getElementById('leastFreq').innerText}`, 180, 145, null, null, 'right');
+
+    // Biggest Single Expense
+    doc.setFontSize(sectionTitleFontSize); // Title font size
+    doc.text('Biggest Single Expense:', 20, 160);  // Section title (bold)
+    doc.setFontSize(sectionContentFontSize); // Content font size
+    doc.text(`$${document.getElementById('biggestExpense').innerText}`, 180, 160, null, null, 'right');
+
+    // Smallest Single Expense
+    doc.setFontSize(sectionTitleFontSize); // Title font size
+    doc.text('Smallest Single Expense:', 20, 175);  // Section title (bold)
+    doc.setFontSize(sectionContentFontSize); // Content font size
+    doc.text(`$${document.getElementById('smallestExpense').innerText}`, 180, 175, null, null, 'right');
+
+    // Add Detailed Insights Section
+    doc.addPage();
+    doc.setFontSize(18);
+    doc.setFont('helvetica', 'bold');
+    doc.text('Detailed Insights', 105, 20, null, null, 'center');  // Section title
+
+    // Add a black line after the section title
+    doc.line(20, 25, 190, 25); // Draw a line
+
+    // Top Expense Category
+    doc.setFontSize(sectionTitleFontSize);
+    doc.text('Top Expense Category:', 20, 35);
+    doc.setFontSize(sectionContentFontSize);
+    doc.text(`${document.getElementById('topCategory').innerText}`, 180, 35, null, null, 'right');
+
+    // Month with Highest Spend
+    doc.setFontSize(sectionTitleFontSize);
+    doc.text('Month with Highest Spend:', 20, 50);
+    doc.setFontSize(sectionContentFontSize);
+    doc.text(`${document.getElementById('highestMonth').innerText}`, 180, 50, null, null, 'right');
+
+    // Top Expense Title
+    doc.setFontSize(sectionTitleFontSize);
+    doc.text('Top Expense Title:', 20, 65);
+    doc.setFontSize(sectionContentFontSize);
+    doc.text(`${document.getElementById('topTitle').innerText}`, 180, 65, null, null, 'right');
+
+    // Expense Distribution by Category
+    doc.setFontSize(sectionTitleFontSize);
+doc.text('Expense Distribution by Category:', 20, 80);
+
+// Add a black line below the title
+
+doc.line(20, 85, 190, 85); // Draw a line below the title
+
+// Move to the next line for the content
+doc.setFontSize(sectionContentFontSize);
+doc.text(`${document.getElementById('categoryDistribution').innerText}`, 20, 95);
+
+    // Add Graphs Section (Add labels for each graph)
+    doc.addPage();
+    doc.setFontSize(18);
+    doc.setFont('helvetica', 'bold');
+ // Add the "Graphs" title
+doc.setFontSize(18);
+doc.setFont('helvetica', 'bold');
+doc.text('Graphs', 105, 20, null, null, 'center');
+
+// Add a black line below the "Graphs" title
+doc.setDrawColor(0, 0, 0);  // Set line color to black
+doc.line(20, 28, 190, 28);  // Line below the title
+
+// Add spacing before the first graph
+let yPosition = 40;  
+
+// Add the first graph (Category Chart)
+doc.addImage(document.getElementById('categoryChart').toDataURL('image/png'), 'PNG', 20, yPosition, 170, 80);
+
+// Add spacing and a black line below the first graph
+yPosition += 90;  // Add extra space
+doc.line(20, yPosition, 190, yPosition);  // Line below the first graph
+
+// Add the title for the first graph
+yPosition += 8;  // Small gap for the title
+doc.setFontSize(8);
+doc.text('Category Chart', 105, yPosition, null, null, 'center');
+
+// Add spacing before the second graph
+yPosition += 15;  // More space
+
+// Add the second graph (Trend Chart)
+doc.addImage(document.getElementById('trendChart').toDataURL('image/png'), 'PNG', 20, yPosition, 170, 80);
+
+// Add spacing and a black line below the second graph
+yPosition += 90;  // Extra space
+doc.line(20, yPosition, 190, yPosition);  // Line below the second graph
+
+// Add the title for the second graph
+yPosition += 8;  // Small gap for the title
+doc.text('Trend Chart', 105, yPosition, null, null, 'center');
+
+// Save PDF
+doc.save('expense_report.pdf');
+
+}
+
+    </script>
+
+</body>
+</html>

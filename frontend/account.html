@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Account</title>
+</head>
+<body>
+    <div class="page-container">
+        <script>
+            document.addEventListener("DOMContentLoaded", () => {
+                const email = localStorage.getItem("email");
+                if (!email) {
+                    alert("No user email found. Please log in.");
+                    window.location.href = "login.html";
+                    return;
+                }
+
+                console.log("Fetching user details for:", email);
+                fetchUserDetails(email);
+            });
+
+            function fetchUserDetails(email) {
+                fetch(`http://localhost:3000/user-details?email=${encodeURIComponent(email)}`)
+                    .then(response => {
+                        if (!response.ok) throw new Error("Failed to fetch user data.");
+                        return response.json();
+                    })
+                    .then(data => {
+                        console.log("Received user data:", data);
+                        document.getElementById("fullname").value = data.fullname || "";
+                        document.getElementById("email").value = data.email || "";
+                        document.getElementById("password").value = data.password || "";
+                        
+                       
+                    })
+                    .catch(err => {
+                        console.error("Error:", err);
+                        alert("Could not load user data.");
+                    });
+            }
+            
+                function fetchAndDisplayBudget() {
+                    fetch(`http://localhost:3000/api/budget/${localStorage.getItem("email")}`)
+                        .then(res => res.json())
+                        .then(data => {
+                            const budgetInput = document.getElementById("budget");
+                            if (data.budget_amount !== undefined) {
+                                budgetInput.value = data.budget_amount;
+                            } else {
+                                budgetInput.value = 0;
+                            }
+                        })
+                        .catch(err => {
+                            console.error("Error fetching budget:", err);
+                            document.getElementById("budget").value = "Error";
+                        });
+                }
+                window.addEventListener("load", () => {
+    fetchAndDisplayBudget();
+});
+
+            function enableEdit(fieldId, buttonId) {
+                const input = document.getElementById(fieldId);
+                input.removeAttribute("readonly");
+                input.focus();
+
+                const button = document.getElementById(buttonId);
+                button.innerText = "✔";
+                button.setAttribute("onclick", `saveChanges('${fieldId}', '${buttonId}')`);
+            }
+
+            function saveChanges(fieldId, buttonId) {
+                const updatedData = {
+                    email: document.getElementById("email").value,
+                    fullname: document.getElementById("fullname").value,
+                    password: document.getElementById("password").value,
+                    budget: document.getElementById("budget").value
+                };
+
+                console.log("Sending updated data:", updatedData);
+
+                fetch("http://localhost:3000/update-user", {
+                    method: "PUT",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify(updatedData)
+                })
+                .then(response => {
+                    if (!response.ok) throw new Error("Failed to update user data.");
+                    return response.json();
+                })
+                .then(result => {
+                    console.log("Update result:", result);
+                    alert("Changes saved successfully!");
+
+                    document.getElementById(fieldId).setAttribute("readonly", true);
+                    const button = document.getElementById(buttonId);
+                    button.innerText = "✏";
+                    button.setAttribute("onclick", `enableEdit('${fieldId}', '${buttonId}')`);
+
+                    // Refresh all values
+                    fetchUserDetails(updatedData.email);
+                })
+                .catch(err => {
+                    console.error("Update error:", err);
+                    alert("Could not save changes.");
+                });
+            }
+        </script>
+
+        <!-- Navigation Bar -->
+        <nav>
+            <ul>
+                <li><a href="home.html">Dashboard</a></li>
+                <li><a href="account.html">My Account</a></li>
+                <li><a href="report.html" >Download Report</a></li>
+            </ul>
+        </nav>
+
+        <!-- Account Details Section -->
+        <div class="container">
+            <h1>My Account</h1>
+            <div>
+                <label>Full Name:</label>
+                <div>
+                    <input type="text" id="fullname" readonly />
+                    <button id="editFullName" onclick="enableEdit('fullname', 'editFullName')">✏</button>
+                </div>
+
+                <label>Email:</label>
+                <div>
+                    <input type="email" id="email" readonly />
+                    <button id="editEmail" onclick="enableEdit('email', 'editEmail')">✏</button>
+                </div>
+
+                <label>Password:</label>
+                <div>
+                    <input type="password" id="password" readonly />
+                    <button id="editPassword" onclick="enableEdit('password', 'editPassword')">✏</button>
+                </div>
+
+                <label>Monthly Budget:</label>
+                <div>
+                    <input type="number" id="budget" readonly />
+                    <button id="editBudget" onclick="enableEdit('budget', 'editBudget')">✏</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <style>
+        
+        /* General Styles */
+        body {
+            font-family: 'Poppins', sans-serif;
+            background: linear-gradient(to right, #3a0ca3, #240046);
+            color: white;
+            margin: 0;
+            padding: 0;
+        }
+     /* Account Details Section */
+     .container {
+    max-width: 600px;
+    width: 100%;
+    padding: 30px 25px;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 16px;
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.4);
+    animation: fadeInUp 1s ease-out forwards;
+    opacity: 0;
+    transform: translateY(20px);
+
+    /* Center the contents using Flexbox */
+    display: flex;
+    flex-direction: column;
+    align-items: center; /* Horizontally center */
+    justify-content: flex-start; /* Vertically start (no extra space at the bottom) */
+    text-align: center; /* Center text inside labels and inputs */
+    margin: 0 auto; /* Ensure the container is centered horizontally */
+}
+
+        .page-container {
+            display: flex;
+            justify-content: center; /* Centers content horizontally */
+            align-items: center; /* Centers content vertically */
+            height: 100vh; /* Full viewport height */
+            padding-top: 80px; /* Adds space below the fixed navigation bar */
+        }
+    
+        /* Navigation Bar */
+        nav {
+            background: rgba(0, 0, 0, 0.7);
+            padding: 10px 0;
+            position: fixed;
+            width: 100%;
+            top: 0;
+            z-index: 1000;
+        }
+        nav ul {
+            list-style: none;
+            display: flex;
+            justify-content: flex-end;
+            padding: 0 20px;
+            margin: 0;
+        }
+        nav ul li {
+            margin: 0 15px;
+        }
+        nav ul li a {
+            color: white;
+            text-decoration: none;
+            font-size: 18px;
+            transition: 0.3s ease;
+        }
+        nav ul li a:hover {
+            color: #ffcc00;
+        }
+    
+        /* Account Details Section */
+        .container {
+            max-width: 600px;
+            width: 100%;
+            padding: 30px 25px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 16px;
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.4);
+            animation: fadeInUp 1s ease-out forwards;
+            opacity: 0;
+            transform: translateY(20px);
+        }
+    
+        /* Heading */
+        h1 {
+            text-align: center;
+            font-size: 36px;
+            font-weight: bold;
+            margin-bottom: 30px;
+            font-family: 'Dancing Script', cursive;
+            color: #ffcc00;
+        }
+    
+        /* Labels and Input Fields */
+        label {
+            display: block;
+            font-weight: 600;
+            margin-bottom: 6px;
+            font-size: 16px;
+        }
+    
+        .edit-container {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+    
+        input {
+            flex: 1;
+            padding: 10px 12px;
+            border-radius: 8px;
+            border: none;
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            font-size: 15px;
+            transition: background 0.3s ease;
+        }
+    
+        input:read-only {
+            background: rgba(255, 255, 255, 0.15);
+            cursor: not-allowed;
+        }
+    
+        input:focus {
+            outline: 2px solid #ffcc00;
+            background: rgba(255, 255, 255, 0.25);
+        }
+    
+        /* Edit Button */
+        .edit-btn {
+            background: #28a745;
+            color: white;
+            border: none;
+            padding: 6px 9px;
+            font-size: 14px;
+            font-weight: bold;
+            border-radius: 50%;
+            cursor: pointer;
+            transition: background 0.3s ease, transform 0.2s ease;
+        }
+    
+        .edit-btn:hover {
+            background: #218838;
+            transform: scale(1.1);
+        }
+    
+        /* Fade In Animation */
+        @keyframes fadeInUp {
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+    </style>
+    
+</body>
+
+</html>
+
